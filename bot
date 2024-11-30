@@ -1,0 +1,69 @@
+import discord
+from discord.ext import commands
+import os
+
+
+def detectar_objetos(image_path):
+    # Simular detección de objetos con una lista de clases comunes
+    objetos_detectados = ["persona", "gato", "perro", "coche"]
+    
+
+    import random
+    if random.choice([True, False]):
+        return random.choice(objetos_detectados)
+    else:
+        return None
+
+
+def get_class(model_path, labels_path, image_path):
+    try:
+        with open(labels_path, 'r') as f:
+            labels = f.read().splitlines()
+        import random
+        return random.choice(labels)
+    except Exception as e:
+        return f"Error en la inferencia: {str(e)}"
+
+
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+os.makedirs("imagenes", exist_ok=True)
+
+@bot.event
+async def on_ready():
+    print(f"{bot.user} está listo y conectado!")
+
+@bot.command()
+async def guardar_imagen(ctx):
+    attachments = ctx.message.attachments
+
+    if attachments:
+        for attachment in attachments:
+            if any(attachment.filename.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".gif")):
+                file_path = os.path.join("imagenes", attachment.filename)
+                await attachment.save(file_path)
+                await ctx.send(f"Imagen guardada como: {attachment.filename}")
+
+                objeto_detectado = detectar_objetos(file_path)
+                if objeto_detectado:
+                    await ctx.send(f"Objeto detectado: {objeto_detectado}. Clasificando...")
+                    
+                    model_path = "model.pth"
+                    labels_path = "labels.txt"
+                    resultado = get_class(model_path, labels_path, file_path)
+
+                    if "Error" in resultado:
+                        await ctx.send(f"Error durante la clasificación: {resultado}")
+                    else:
+                        await ctx.send(f"La imagen fue clasificada como: {resultado}")
+                else:
+                    await ctx.send("Lo siento, no estoy seguro de lo que se muestra en la imagen.")
+            else:
+                await ctx.send("El archivo adjunto no es una imagen válida.")
+    else:
+        await ctx.send("No se encontró ninguna imagen adjunta.")
+
+
+bot.run('YOUR_TOKEN_HERE')
